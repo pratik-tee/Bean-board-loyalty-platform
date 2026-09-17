@@ -1,0 +1,1 @@
+# Auriga_IT_loyalty_points
