@@ -3,6 +3,28 @@ import axios from "axios";
 
 const API = "/api";
 
+// ==========================================
+// PAGE ROUTING
+// ==========================================
+
+function getPageFromPath() {
+    const path = window.location.pathname;
+
+    if (path === "/login") {
+        return "login";
+    }
+
+    if (path === "/register") {
+        return "register";
+    }
+
+    if (path === "/dashboard") {
+        return "dashboard";
+    }
+
+    return "landing";
+}
+
 
 // ==========================================
 // MAIN APP
@@ -10,11 +32,101 @@ const API = "/api";
 
 function App() {
 
-    const [page, setPage] = useState(
-        localStorage.getItem("token")
-            ? "dashboard"
-            : "landing"
-    );
+    // ------------------------------------------
+    // Current page
+    // ------------------------------------------
+
+    const [page, setPageState] = useState(() => {
+
+        const initialPage = getPageFromPath();
+
+        // If the user is already logged in and opens "/",
+        // take them directly to the dashboard.
+        if (
+            initialPage === "landing" &&
+            localStorage.getItem("token")
+        ) {
+            return "dashboard";
+        }
+
+        return initialPage;
+    });
+
+
+    // ------------------------------------------
+    // Navigate between pages
+    // ------------------------------------------
+
+    const setPage = (nextPage) => {
+
+        const paths = {
+            landing: "/",
+            login: "/login",
+            register: "/register",
+            dashboard: "/dashboard",
+        };
+
+        window.history.pushState(
+            {},
+            "",
+            paths[nextPage]
+        );
+
+        setPageState(nextPage);
+    };
+
+
+    // ------------------------------------------
+    // Browser Back / Forward
+    // ------------------------------------------
+
+    useEffect(() => {
+
+        const handlePopState = () => {
+
+            const nextPage = getPageFromPath();
+
+            // Do not allow an unauthenticated user
+            // to go back into the dashboard.
+            if (
+                nextPage === "dashboard" &&
+                !localStorage.getItem("token")
+            ) {
+                window.history.replaceState(
+                    {},
+                    "",
+                    "/login"
+                );
+
+                setPageState("login");
+
+                return;
+            }
+
+            setPageState(nextPage);
+        };
+
+
+        window.addEventListener(
+            "popstate",
+            handlePopState
+        );
+
+
+        return () => {
+
+            window.removeEventListener(
+                "popstate",
+                handlePopState
+            );
+        };
+
+    }, []);
+
+
+    // ------------------------------------------
+    // Form state
+    // ------------------------------------------
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -23,8 +135,15 @@ function App() {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
+
+    // ------------------------------------------
+    // Logged-in user
+    // ------------------------------------------
+
     const [user, setUser] = useState(
-        JSON.parse(localStorage.getItem("user") || "null")
+        JSON.parse(
+            localStorage.getItem("user") || "null"
+        )
     );
 
 
@@ -49,17 +168,21 @@ function App() {
                 }
             );
 
+
             localStorage.setItem(
                 "token",
                 response.data.token
             );
+
 
             localStorage.setItem(
                 "user",
                 JSON.stringify(response.data.user)
             );
 
+
             setUser(response.data.user);
+
             setPage("dashboard");
 
         } catch (err) {
@@ -72,7 +195,6 @@ function App() {
         } finally {
 
             setLoading(false);
-
         }
     };
 
@@ -99,6 +221,7 @@ function App() {
                 }
             );
 
+
             setName("");
             setPassword("");
 
@@ -118,7 +241,6 @@ function App() {
         } finally {
 
             setLoading(false);
-
         }
     };
 
@@ -133,8 +255,16 @@ function App() {
         localStorage.removeItem("user");
 
         setUser(null);
-        setPage("landing");
 
+        // Replace the current dashboard URL
+        // instead of adding another history entry.
+        window.history.replaceState(
+            {},
+            "",
+            "/"
+        );
+
+        setPageState("landing");
     };
 
 
@@ -146,14 +276,14 @@ function App() {
 
         return (
             <AuthPage
-    title="Welcome back"
-    subtitle="Sign in to your rewards counter"
-    buttonText={
-        loading
-            ? "Signing in..."
-            : "Sign In"
-    }
-    loading={loading}
+                title="Welcome back"
+                subtitle="Sign in to your rewards counter"
+                buttonText={
+                    loading
+                        ? "Signing in..."
+                        : "Sign In"
+                }
+                loading={loading}
                 name={name}
                 email={email}
                 password={password}
@@ -169,22 +299,21 @@ function App() {
                 switchText="Create an account"
             />
         );
-
     }
 
 
     if (page === "register") {
 
         return (
-           <AuthPage
-    title="Create account"
-    subtitle="Set up your café rewards counter"
-    buttonText={
-        loading
-            ? "Creating account..."
-            : "Create Account"
-    }
-    loading={loading}
+            <AuthPage
+                title="Create account"
+                subtitle="Set up your café rewards counter"
+                buttonText={
+                    loading
+                        ? "Creating account..."
+                        : "Create Account"
+                }
+                loading={loading}
                 name={name}
                 email={email}
                 password={password}
@@ -201,7 +330,6 @@ function App() {
                 register
             />
         );
-
     }
 
 
@@ -213,7 +341,6 @@ function App() {
                 logout={logout}
             />
         );
-
     }
 
 
@@ -230,7 +357,6 @@ function App() {
         />
     );
 }
-
 
 // ==========================================
 // LANDING PAGE
