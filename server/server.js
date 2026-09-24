@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 const dotenv = require("dotenv");
 
 const db = require("./db");
@@ -22,6 +23,10 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Serve React production build
+const clientPath = path.join(__dirname, "../client/dist");
+app.use(express.static(clientPath));
 
 const JWT_SECRET =
     process.env.JWT_SECRET || "cafe-rewards-secret";
@@ -1431,7 +1436,14 @@ app.get("/outbox", (req, res) => {
     }
 });
 
+// Serve React app for frontend routes
+app.use((req, res, next) => {
+    if (req.method === "GET" && !req.path.startsWith("/api")) {
+        return res.sendFile(path.join(clientPath, "index.html"));
+    }
 
+    next();
+});
 // ==================================================
 // 404 HANDLER
 // ==================================================
